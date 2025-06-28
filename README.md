@@ -2,6 +2,18 @@
 
 A powerful tool for analyzing StackOverflow Survey data using a star schema design in DuckDB.
 
+## Implementation details
+
+In the end, the impl from air and the impl from junie has converged to something
+very very similar. The CLI is basically the same. Junie however, took a lot more time
+to get to a correct state, even with me knowing beforehand what was wrong or right.
+Air struggled a bit from the start, not knowing well duckdb methods, but got it very
+fast once it was able to import the CSVs. Air got the whole implementation basically
+zeroshot, after building the constructor.
+Junie needed a lot more babysitting, fewshot, was wrong many times.
+A big important thing is that Junie at some point went over the maximum context,
+leaving the project in a broken state. Luckily enough I had git!
+
 ## Features
 
 - **Star Schema Design**: Efficiently organized data with fact and dimension tables

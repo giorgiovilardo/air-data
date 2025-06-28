@@ -1,0 +1,114 @@
+column,question_text,type
+MainBranch,"Which of the following options best describes you today? For the purpose of this survey, a developer is ""someone who writes code"".*",SC
+Age,What is your age?*,SC
+Employment,Which of the following best describes your current employment status? Select all that apply.*,MC
+RemoteWork,Which best describes your current work situation?,SC
+Check,Just checking to make sure you are paying attention to the survey questions. Select ‘Apples’ from the list and you can get back to the survey.*,SC
+CodingActivities,Which of the following best describes the code you write outside of work? Select all that apply.,MC
+EdLevel,Which of the following best describes the highest level of formal education that you’ve completed? *,SC
+LearnCode,How do you learn to code? Select all that apply.,MC
+LearnCodeOnline,What online resources do you use to learn to code? Select all that apply.,MC
+TechDoc,What is the source of the technical documentation you use most often to learn to code?  Select all that apply.,MC
+YearsCode,"Including any education, how many years have you been coding in total?",SC
+YearsCodePro,"NOT including education, how many years have you coded professionally (as a part of your work)?",SC
+DevType,"Which of the following describes your current job, the one you do most of the time? Please select only one.",SC
+OrgSize,"Approximately how many people are employed by the company or organization you currently work for?  This should only include your primary company, and not the entire holding or parent company if that applies.",SC
+PurchaseInfluence,"What level of influence do you, personally, have over new technology purchases at your organization?",SC
+BuyNewTool,"When buying a new tool or software, how do you discover and research available solutions? Select all that apply.",MC
+BuildvsBuy,"When asked to provide a recommendation for solving a problem at work with a new tool or software, what has been your most recent choice of the following?",SC
+TechEndorse,What product feature do you care about most when endorsing a technology purchase? Select all that apply.,MC
+Country,Where do you live? *,SC
+Currency,Which currency do you use day-to-day? *,SC
+CompTotal,"What is your current total annual compensation (salary, bonuses, and perks, before taxes and deductions)?",TE
+LanguageHaveWorkedWith,"Which programming, scripting, and markup languages have you done extensive development work in over the past year?",MC
+LanguageWantToWorkWith,"Which programming, scripting, and markup languages do you want to work in over the next year?",MC
+LanguageAdmired,"Which programming, scripting, and markup languages do you admire?",MC
+DatabaseHaveWorkedWith,Which database environments have you done extensive development work in over the past year?,MC
+DatabaseWantToWorkWith,Which database environments do you want to work in over the next year?,MC
+DatabaseAdmired,Which database environments do you admire?,MC
+PlatformHaveWorkedWith,Which cloud platforms have you done extensive development work for over the past year?,MC
+PlatformWantToWorkWith,Which cloud platforms do you want to continue doing extensive development work?,MC
+PlatformAdmired,Which cloud platforms do you admire?,MC
+WebframeHaveWorkedWith,Which web frameworks and web technologies have you done extensive development work in over the past year?,MC
+WebframeWantToWorkWith,Which web frameworks and web technologies do you want to work in over the next year?,MC
+WebframeAdmired,Which web frameworks and web technologies do you admire?,MC
+EmbeddedHaveWorkedWith,Which embedded systems and technologies have you done extensive development work in over the past year?,MC
+EmbeddedWantToWorkWith,Which embedded systems and technologies do you want to work in over the next year?,MC
+EmbeddedAdmired,Which embedded systems and technologies do you admire?,MC
+MiscTechHaveWorkedWith,Which other frameworks and libraries have you done extensive development work in over the past year?,MC
+MiscTechWantToWorkWith,Which other frameworks and libraries do you want to work in over the next year?,MC
+MiscTechAdmired,Which other frameworks and libraries do you admire?,MC
+ToolsTechHaveWorkedWith,"Which developer tools for compiling, building and testing have you done extensive development work in over the past year?",MC
+ToolsTechWantToWorkWith,"Which developer tools for compiling, building and testing do you want to work in over the next year?",MC
+ToolsTechAdmired,"Which developer tools for compiling, building and testing do you admire?",MC
+NEWCollabToolsHaveWorkedWith,Which development environments did you use regularly over the past year?,MC
+NEWCollabToolsWantToWorkWith,Which development environments do you want to work with over the next year?,MC
+NEWCollabToolsAdmired,Which development environments do you admire?,MC
+OpSysProfessional use,What is the primary operating system in which you work for professional purposes?,MC
+OpSysPersonal use,What is the primary operating system in which you work for personal purposes?,MC
+OfficeStackAsyncHaveWorkedWith,Which collaborative work management and/or code documentation tools did you use regularly over the past year?,MC
+OfficeStackAsyncWantToWorkWith,Which collaborative work management and/or code documentation tools do you want to work with over the next year?,MC
+OfficeStackAsyncAdmired,Which collaborative work management and/or code documentation tools do you admire?,MC
+OfficeStackSyncHaveWorkedWith,Which communication tools did you use regularly over the past year?,MC
+OfficeStackSyncWantToWorkWith,Which communication tools do you want to work with over the next year?,MC
+OfficeStackSyncAdmired,Which communication tools do you admire?,MC
+AISearchDevHaveWorkedWith,Which AI-powered search and developer tools did you use regularly over thepast year?,MC
+AISearchDevWantToWorkWith,Which AI-powered search and developer tools do you want to work with over the next year?,MC
+AISearchDevAdmired,Which AI-powered search and developer tools do you admire?,MC
+NEWSOSites,Which of the following Stack Overflow sites have you visited? Select all that apply. *,MC
+SOVisitFreq,How frequently would you say you visit Stack Overflow?,SC
+SOAccount,Do you have a Stack Overflow account?,SC
+SOPartFreq,"How frequently would you say you participate in Q&A on Stack Overflow? By participate we mean ask, answer, vote for, or comment on questions.",SC
+SOHow,How do you use Stack Overflow?  Select all that apply.,MC
+SOComm,Do you consider yourself a member of the Stack Overflow community?,SC
+AISelect,Do you currently use AI tools in your development process? *,SC
+AISent,How favorable is your stance on using AI tools as part of your development workflow?,SC
+AIBen,"For the AI tools you use as part of your development workflow, what are the MOST important benefits you are hoping to achieve? Please check all that apply.",MC
+AIAcc,How much do you trust the accuracy of the output from AI tools as part of your development workflow?,SC
+AIComplex,How well do the AI tools you use in your development workflow handle complex tasks?,SC
+AIToolInterested in Using,Which parts of your development workflow are you interested in using AI tools for over the next year?,MC
+AIToolCurrently Using,Which parts of your development workflow are you currently using AI tools for?,MC
+AIToolNot interested in Using,Which parts of your development workflow are you NOT interested in using AI tools for?,MC
+AINextMuch more integrated,"Thinking about how your job and process changes over time, how integrated in your workflow do you anticipate AI tools you are currently using will be 1 year from now? - Much more integrated",SC
+AINextNo change,"Thinking about how your job and process changes over time, how integrated in your workflow do you anticipate AI tools you are currently using will be 1 year from now? - No change",SC
+AINextMore integrated,"Thinking about how your job and process changes over time, how integrated in your workflow do you anticipate AI tools you are currently using will be 1 year from now? - More integrated",SC
+AINextLess integrated,"Thinking about how your job and process changes over time, how integrated in your workflow do you anticipate AI tools you are currently using will be 1 year from now? - Less integrated",SC
+AINextMuch less integrated,"Thinking about how your job and process changes over time, how integrated in your workflow do you anticipate AI tools you are currently using will be 1 year from now? - Much less integrated",SC
+AIThreat,Do you believe AI is a threat to your current job?,SC
+AIEthics,Which AI ethical responsibilities are most important to you?  Select all that apply.,MC
+AIChallenges,What are the challenges to your company/whole team using AI code assistants or GenAI tools? Select all that apply.,MC
+TBranch,Would you like to participate in the Professional Developer Series? *,SC
+ICorPM,Are you an individual contributor or people manager?,SC
+WorkExp,How many years of working experience do you have?,SC
+Knowledge_1,I have interactions with people outside of my immediate team. - Please rate your level of agreement with the following statement,SC
+Knowledge_2,"Knowledge silos prevent me from getting ideas across the organization (i.e., one individual or team has information that isn't shared with others) - Please rate your level of agreement with the following statement",SC
+Knowledge_3,I can find up-to-date information within my organization to help me do my job. - Please rate your level of agreement with the following statement,SC
+Knowledge_4,I am able to quickly find answers to my questions with existing tools and resources. - Please rate your level of agreement with the following statement,SC
+Knowledge_5,I know which system or resource to use to find information and answers to questions I have. - Please rate your level of agreement with the following statement,SC
+Knowledge_6,I often find myself answering questions that I've already answered before. - Please rate your level of agreement with the following statement,SC
+Knowledge_7,Waiting on answers to questions often causes interruptions and disrupts my workflow. - Please rate your level of agreement with the following statement,SC
+Knowledge_8,I feel like I have the tools and/or resources to quickly understand and work on any area of my company's code/system/platform. - Please rate your level of agreement with the following statement,SC
+Knowledge_9,I have asked my employer to reimburse me for tools or a product that helps me do my job better or faster,SC
+Frequency_1,Needing help from people outside of your immediate team? - How frequently do you experience each of the following?,SC
+Frequency_2,Interacting with people outside of your immediate team? - How frequently do you experience each of the following?,SC
+Frequency_3,Encountering knowledge silos (where one individual or team has information that's not shared or distributed with other individuals or teams) at work? - How frequently do you experience each of the following?,SC
+TimeSearching,"On an average day, how much time do you typically spend searching for answers or solutions to problems you encounter at work? (This includes time spent searching on your own, asking a colleague, and waiting for a response).",SC
+TimeAnswering,"On an average day, how much time do you typically spend answering questions you get asked at work?",SC
+Frustration,Which of these company challenges causes you the most frustration? Select all that apply.,MC
+ProfessionalTech,My company has:,MC
+ProfessionalCloud,"At my company, our applications, databases and services are hosted:",SC
+ProfessionalQuestion,"When you have a technical question at work, where do you first go to get an answer?",SC
+Industry,What industry is the company you work for in?,SC
+JobSatPoints_1,Driving strategy for my team - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points,SC
+JobSatPoints_4,Contributing to open source - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points,SC
+JobSatPoints_5,Securing data and environments - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points,SC
+JobSatPoints_6,Improving quality of code and developer environments - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points,SC
+JobSatPoints_7,"Learning and using new technology, including platforms, APIs and libraries - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points",SC
+JobSatPoints_8,"Designing and building environments, databases, and all things architecture - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points",SC
+JobSatPoints_9,"Being a power user of a tool, developer language or process that others come to for answers and guidance about - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points",SC
+JobSatPoints_10,Working with new and/or top-quality hardware - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points,SC
+JobSatPoints_11,A well-staffed/sourced internal network that makes observability easy so network or runtime issues are addressed and fixed easily - Assign points to the following attributes of your job according to those that contribute the most to your satisfaction out of 100 total points,SC
+SurveyLength,How do you feel about the length of the survey this year?,MC
+SurveyEase,How easy or difficult was this survey to complete?,MC
+ConvertedCompYearly,Converted yearly compensation,TE
+JobSat,How satisfied are you in your current professional developer role?,SC

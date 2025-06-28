@@ -1,0 +1,15 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+.ruff_cache
+.DS_Store
+so_2024_raw.csv
+so_2024_raw_data.csv

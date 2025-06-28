@@ -1,3 +1,4 @@
+import csv
 from pathlib import Path
 
 import duckdb
@@ -11,6 +12,7 @@ class StackOverflowAnalyzer:
 
         # Get paths to CSV files relative to this module
         base_path = Path(__file__).parent / "so_data"
+        self._recompose_csv(base_path)
         self.data_csv_path: Path = (
             base_path / "so_2024_raw.csv"
         )  # Updated to use sample file
@@ -19,6 +21,18 @@ class StackOverflowAnalyzer:
         # Read CSV files into DuckDB tables and create star schema
         self._load_data()
         self._create_star_schema()
+
+    def _recompose_csv(self, base_path: Path):
+        with open(base_path / "so_2024_raw.csv", "w", newline="", encoding="utf-8") as outfile:
+            writer = csv.writer(outfile)
+            for i, path in enumerate([base_path / "so_2024_raw_1.csv", base_path / "so_2024_raw_2.csv"]):
+                with open(path, "r", newline="", encoding="utf-8") as infile:
+                    reader = csv.reader(infile)
+                    header = next(reader)
+                    if i == 0:
+                        writer.writerow(header)
+                    for row in reader:
+                        writer.writerow(row)
 
     def _load_data(self) -> None:
         """Load CSV files into DuckDB tables using native CSV reading facilities."""

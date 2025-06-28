@@ -1,6 +1,7 @@
-from io import StringIO
 from pathlib import Path
-from typing import Self
+from typing import Optional, Self
+
+import pandas as pd
 
 
 class StackOverflowAnalyzer:
@@ -47,10 +48,10 @@ class StackOverflowAnalyzer:
         Returns:
             Self: A new StackOverflowAnalyzer instance.
         """
-        import pandas as pd
-        import tempfile
         import os
-        from pathlib import Path
+        import tempfile
+
+        import pandas as pd
 
         # Hardcoded paths for input files
         base_dir = Path(__file__).parent / "so_data"
@@ -66,14 +67,140 @@ class StackOverflowAnalyzer:
         combined_df = pd.concat([df1, df2], ignore_index=True)
 
         # Create a temporary file for the combined data
-        temp_fd, combined_path = tempfile.mkstemp(suffix='.csv')
+        temp_fd, combined_path = tempfile.mkstemp(suffix=".csv")
         os.close(temp_fd)
 
         # Write the combined data to the temporary file
         combined_df.to_csv(combined_path, index=False)
 
         # Create and return a new analyzer instance
-        return cls(
-            data_file=combined_path,
-            schema_file=str(schema_path)
-        )
+        return cls(data_file=combined_path, schema_file=str(schema_path))
+
+    def get_survey_structure(self, *, sort_by: Optional[str] = None) -> pd.DataFrame:
+        """
+        Returns the survey structure (list of questions) as a DataFrame.
+
+        Args:
+            sort_by: Optional column to sort by. If None, sorts by the original order.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the survey structure.
+        """
+        # Query the schema table to get the survey structure
+        query = "SELECT * FROM so_schema"
+
+        # Add sorting if specified
+        if sort_by:
+            query += f' ORDER BY "{sort_by}"'
+
+        # Execute the query and return the result as a DataFrame
+        return self.conn.execute(query).df()
+
+    def search_questions(self, *, search_term: str) -> pd.DataFrame:
+        """
+        Searches for questions containing the specified search term.
+
+        Args:
+            search_term: The term to search for in question text.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the matching questions.
+        """
+        # Query the schema table to find questions containing the search term
+        query = f"""
+            SELECT * FROM so_schema 
+            WHERE "question_text" ILIKE '%{search_term}%'
+        """
+
+        # Execute the query and return the result as a DataFrame
+        return self.conn.execute(query).df()
+
+    def create_respondent_subset(self, *, column: str, option: str) -> Self:
+        """
+        Creates a subset of respondents based on their answer to a specific question.
+
+        Args:
+            column: The column (question) to filter on.
+            option: The option (answer) to filter for. If empty, includes all non-null values.
+
+        Returns:
+            Self: A new StackOverflowAnalyzer instance with the filtered data.
+        """
+        import os
+        import tempfile
+
+        # Create a query to filter the data
+        if option:
+            # For MC questions, need to check if the option is in the semicolon-separated list
+            query = f'''
+                SELECT * FROM so_data 
+                WHERE "{column}" = '{option}' OR "{column}" LIKE '{option};%' OR 
+                      "{column}" LIKE '%;{option}' OR "{column}" LIKE '%;{option};%'
+            '''
+        else:
+            # If no option specified, include all non-null values
+            query = f'''
+                SELECT * FROM so_data 
+                WHERE "{column}" IS NOT NULL AND "{column}" != ''
+            '''
+
+        # Execute the query to get the filtered data
+        filtered_data = self.conn.execute(query).df()
+
+        # Create a temporary file for the filtered data
+        temp_fd, filtered_path = tempfile.mkstemp(suffix=".csv")
+        os.close(temp_fd)
+
+        # Write the filtered data to the temporary file
+        filtered_data.to_csv(filtered_path, index=False)
+
+        # Create and return a new analyzer instance with the filtered data
+        return type(self)(data_file=filtered_path, schema_file=self.schema_file)
+
+    def get_answer_distribution(self, *, column: str) -> pd.DataFrame:
+        """
+        Returns the distribution of answers for a specific question.
+
+        Args:
+            column: The column (question) to get the distribution for.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the distribution of answers.
+        """
+        # Get the question type from the schema
+        query_type = f"""
+            SELECT "type" FROM so_schema 
+            WHERE "column" = '{column}'
+        """
+        question_type = self.conn.execute(query_type).fetchone()[0]  # type: ignore
+
+        if question_type == "SC":
+            # For single choice questions, count each value
+            query = f'''
+                SELECT "{column}" as option, COUNT(*) as count,
+                       COUNT(*) * 100.0 / (SELECT COUNT(*) FROM so_data WHERE "{column}" IS NOT NULL) as percentage
+                FROM so_data
+                WHERE "{column}" IS NOT NULL
+                GROUP BY "{column}"
+                ORDER BY count DESC
+            '''
+        elif question_type == "MC":
+            # For multiple choice questions, need to unnest the semicolon-separated values
+            query = f'''
+                WITH unnested AS (
+                    SELECT unnest(string_split("{column}", ';')) as option
+                    FROM so_data
+                    WHERE "{column}" IS NOT NULL
+                )
+                SELECT option, COUNT(*) as count,
+                       COUNT(*) * 100.0 / (SELECT COUNT(*) FROM unnested) as percentage
+                FROM unnested
+                GROUP BY option
+                ORDER BY count DESC
+            '''
+        else:
+            # For other question types, return an empty DataFrame
+            return pd.DataFrame(columns=["option", "count", "percentage"])
+
+        # Execute the query and return the result as a DataFrame
+        return self.conn.execute(query).df()

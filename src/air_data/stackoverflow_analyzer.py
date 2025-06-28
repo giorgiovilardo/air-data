@@ -26,17 +26,154 @@ class StackOverflowAnalyzer:
         # Create a DuckDB connection
         self.conn = duckdb.connect(":memory:")
 
-        # Load the schema file into a DuckDB table
+        # Load the raw data into temporary tables
+        self._load_raw_data()
+
+        # Create the star schema
+        self._create_star_schema()
+
+    def _load_raw_data(self) -> None:
+        """
+        Load the raw data from CSV files into temporary DuckDB tables.
+        """
+        # Load the schema file into a temporary DuckDB table
         self.conn.execute(f"""
             CREATE TABLE so_schema AS 
-            SELECT * FROM read_csv_auto('{schema_file}')
+            SELECT * FROM read_csv_auto('{self.schema_file}')
         """)
 
-        # Load the data file into a DuckDB table
+        # Load the data file into a temporary DuckDB table
         self.conn.execute(f"""
             CREATE TABLE so_data AS 
-            SELECT * FROM read_csv_auto('{data_file}')
+            SELECT * FROM read_csv_auto('{self.data_file}')
         """)
+
+    def _create_star_schema(self) -> None:
+        """
+        Create a star schema from the raw data.
+
+        This creates the following tables:
+        - dim_questions: Dimension table for questions
+        - dim_respondents: Dimension table for respondents
+        - fact_responses_sc: Fact table for single-choice responses
+        - fact_responses_mc: Fact table for multiple-choice responses
+        """
+        # Create dimension table for questions
+        self.conn.execute("""
+            CREATE TABLE dim_questions AS
+            SELECT 
+                ROW_NUMBER() OVER () as question_id,
+                "column" as column_name,
+                question_text,
+                type
+            FROM so_schema
+        """)
+
+        # Create dimension table for respondents
+        # Extract demographic columns that are single-choice
+        demographic_columns = (
+            self.conn.execute("""
+            SELECT column_name
+            FROM dim_questions
+            WHERE type = 'SC' AND column_name IN (
+                'MainBranch', 'Age', 'RemoteWork', 'EdLevel', 'YearsCode', 
+                'YearsCodePro', 'DevType', 'Country'
+            )
+        """)
+            .df()["column_name"]
+            .tolist()
+        )
+
+        # Create a comma-separated list of demographic columns for the SQL query
+        demographic_cols_sql = ", ".join([f'"{col}"' for col in demographic_columns])
+
+        # Create the respondents dimension table with a unique ID and demographic information
+        self.conn.execute(f"""
+            CREATE TABLE dim_respondents AS
+            SELECT 
+                ROW_NUMBER() OVER () as respondent_id,
+                {demographic_cols_sql}
+            FROM so_data
+        """)
+
+        # Get all columns from the data
+        data_columns = (
+            self.conn.execute("SELECT * FROM so_data LIMIT 0").df().columns.tolist()
+        )
+
+        # Get SC and MC questions
+        sc_questions = self.conn.execute("""
+            SELECT question_id, column_name
+            FROM dim_questions
+            WHERE type = 'SC'
+        """).df()
+
+        mc_questions = self.conn.execute("""
+            SELECT question_id, column_name
+            FROM dim_questions
+            WHERE type = 'MC'
+        """).df()
+
+        # Create empty fact tables
+        self.conn.execute("""
+            CREATE TABLE fact_responses_sc (
+                respondent_id INTEGER,
+                question_id INTEGER,
+                response VARCHAR
+            )
+        """)
+
+        self.conn.execute("""
+            CREATE TABLE fact_responses_mc (
+                respondent_id INTEGER,
+                question_id INTEGER,
+                response VARCHAR
+            )
+        """)
+
+        # Process each SC question
+        for _, row in sc_questions.iterrows():
+            question_id = row["question_id"]
+            column_name = row["column_name"]
+
+            if column_name in data_columns:
+                # Insert data for this column
+                self.conn.execute(f"""
+                    INSERT INTO fact_responses_sc
+                    SELECT 
+                        ROW_NUMBER() OVER () as respondent_id,
+                        {question_id} as question_id,
+                        CASE 
+                            WHEN "{column_name}" IS NULL THEN 'NA'
+                            WHEN CAST("{column_name}" AS VARCHAR) = '' THEN 'NA'
+                            ELSE CAST("{column_name}" AS VARCHAR)
+                        END as response
+                    FROM so_data
+                """)
+
+        # Process each MC question
+        for _, row in mc_questions.iterrows():
+            question_id = row["question_id"]
+            column_name = row["column_name"]
+
+            if column_name in data_columns:
+                # Insert data for this column
+                self.conn.execute(f"""
+                    WITH mc_data AS (
+                        SELECT 
+                            ROW_NUMBER() OVER () as respondent_id,
+                            {question_id} as question_id,
+                            CAST("{column_name}" AS VARCHAR) as response_combined
+                        FROM so_data
+                        WHERE "{column_name}" IS NOT NULL AND CAST("{column_name}" AS VARCHAR) != ''
+                    )
+                    INSERT INTO fact_responses_mc
+                    SELECT 
+                        respondent_id,
+                        question_id,
+                        unnest(string_split(response_combined, ';')) as response
+                    FROM mc_data
+                """)
 
     @classmethod
     def from_split_files(cls) -> Self:
@@ -86,12 +223,20 @@ class StackOverflowAnalyzer:
         Returns:
             pd.DataFrame: DataFrame containing the survey structure.
         """
-        # Query the schema table to get the survey structure
-        query = "SELECT * FROM so_schema"
+        # Query the dimension table for questions
+        query = """
+            SELECT 
+                column_name as column,
+                question_text,
+                type
+            FROM dim_questions
+        """
 
         # Add sorting if specified
         if sort_by:
             query += f' ORDER BY "{sort_by}"'
+        else:
+            query += " ORDER BY question_id"  # Default sort by question_id to maintain original order
 
         # Execute the query and return the result as a DataFrame
         return self.conn.execute(query).df()
@@ -101,15 +246,21 @@ class StackOverflowAnalyzer:
         Searches for questions containing the specified search term.
 
         Args:
-            search_term: The term to search for in question text.
+            search_term: The term to search for in question text or column name.
 
         Returns:
             pd.DataFrame: DataFrame containing the matching questions.
         """
-        # Query the schema table to find questions containing the search term
+        # Query the dimension table for questions to find those containing the search term
+        # in either the question_text or column_name
         query = f"""
-            SELECT * FROM so_schema 
-            WHERE "question_text" ILIKE '%{search_term}%'
+            SELECT 
+                column_name as column,
+                question_text,
+                type
+            FROM dim_questions 
+            WHERE question_text ILIKE '%{search_term}%' OR column_name ILIKE '%{search_term}%'
+            ORDER BY question_id
         """
 
         # Execute the query and return the result as a DataFrame
@@ -127,71 +278,94 @@ class StackOverflowAnalyzer:
         Returns:
             pd.DataFrame: DataFrame containing the distribution of respondents grouped by their answers.
         """
-        # Get the question type from the schema
-        query_type = f"""
-            SELECT "type" FROM so_schema 
-            WHERE "column" = '{column}'
+        # Get the question type and ID from the dimension table
+        query_info = f"""
+            SELECT question_id, type 
+            FROM dim_questions 
+            WHERE column_name = '{column}'
         """
-        question_type = self.conn.execute(query_type).fetchone()[0]  # type: ignore
+        result = self.conn.execute(query_info).fetchone()
+        if not result:
+            return pd.DataFrame(columns=["option", "count", "percentage"])
+
+        question_id, question_type = result  # type: ignore
 
         # Create the base query depending on the question type
         if question_type == "SC":
             # For single choice questions
             if option:
                 # Filter for the specific option
-                query = f'''
-                    SELECT "{column}" as option, COUNT(*) as count,
-                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM so_data WHERE "{column}" = '{option}') as percentage
-                    FROM so_data
-                    WHERE "{column}" = '{option}'
-                    GROUP BY "{column}"
+                query = f"""
+                    SELECT 
+                        response as option, 
+                        COUNT(*) as count,
+                        COUNT(*) * 100.0 / (
+                            SELECT COUNT(*) 
+                            FROM fact_responses_sc 
+                            WHERE question_id = {question_id} AND response != 'NA'
+                        ) as percentage
+                    FROM fact_responses_sc
+                    WHERE question_id = {question_id} AND response = '{option}'
+                    GROUP BY response
                     ORDER BY count DESC
-                '''
+                """
             else:
                 # Show distribution of all options
-                query = f'''
-                    SELECT "{column}" as option, COUNT(*) as count,
-                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM so_data WHERE "{column}" IS NOT NULL) as percentage
-                    FROM so_data
-                    WHERE "{column}" IS NOT NULL
-                    GROUP BY "{column}"
+                query = f"""
+                    SELECT 
+                        response as option, 
+                        COUNT(*) as count,
+                        COUNT(*) * 100.0 / (
+                            SELECT COUNT(*) 
+                            FROM fact_responses_sc 
+                            WHERE question_id = {question_id} AND response != 'NA'
+                        ) as percentage
+                    FROM fact_responses_sc
+                    WHERE question_id = {question_id} AND response != 'NA'
+                    GROUP BY response
                     ORDER BY count DESC
-                '''
+                """
         elif question_type == "MC":
             # For multiple choice questions
             if option:
-                # Filter for the specific option in semicolon-separated values
-                query = f'''
-                    WITH filtered_data AS (
-                        SELECT * FROM so_data 
-                        WHERE "{column}" = '{option}' OR "{column}" LIKE '{option};%' OR 
-                              "{column}" LIKE '%;{option}' OR "{column}" LIKE '%;{option};%'
-                    ),
-                    unnested AS (
-                        SELECT unnest(string_split("{column}", ';')) as option
-                        FROM filtered_data
-                        WHERE "{column}" IS NOT NULL
+                # Filter for the specific option
+                query = f"""
+                    WITH filtered_respondents AS (
+                        SELECT DISTINCT respondent_id
+                        FROM fact_responses_mc
+                        WHERE question_id = {question_id} AND response = '{option}'
                     )
-                    SELECT option, COUNT(*) as count,
-                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM unnested) as percentage
-                    FROM unnested
-                    GROUP BY option
+                    SELECT 
+                        response as option, 
+                        COUNT(*) as count,
+                        COUNT(*) * 100.0 / (
+                            SELECT COUNT(*) 
+                            FROM fact_responses_mc f
+                            JOIN filtered_respondents r ON f.respondent_id = r.respondent_id
+                            WHERE f.question_id = {question_id}
+                        ) as percentage
+                    FROM fact_responses_mc f
+                    JOIN filtered_respondents r ON f.respondent_id = r.respondent_id
+                    WHERE f.question_id = {question_id}
+                    GROUP BY response
                     ORDER BY count DESC
-                '''
+                """
             else:
                 # Show distribution of all options
-                query = f'''
-                    WITH unnested AS (
-                        SELECT unnest(string_split("{column}", ';')) as option
-                        FROM so_data
-                        WHERE "{column}" IS NOT NULL
-                    )
-                    SELECT option, COUNT(*) as count,
-                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM unnested) as percentage
-                    FROM unnested
-                    GROUP BY option
+                query = f"""
+                    SELECT 
+                        response as option, 
+                        COUNT(*) as count,
+                        COUNT(*) * 100.0 / (
+                            SELECT COUNT(*) 
+                            FROM fact_responses_mc 
+                            WHERE question_id = {question_id}
+                        ) as percentage
+                    FROM fact_responses_mc
+                    WHERE question_id = {question_id}
+                    GROUP BY response
                     ORDER BY count DESC
-                '''
+                """
         else:
             # For other question types, return an empty DataFrame
             return pd.DataFrame(columns=["option", "count", "percentage"])
@@ -209,37 +383,50 @@ class StackOverflowAnalyzer:
         Returns:
             pd.DataFrame: DataFrame containing the distribution of answers.
         """
-        # Get the question type from the schema
-        query_type = f"""
-            SELECT "type" FROM so_schema 
-            WHERE "column" = '{column}'
+        # Get the question type and ID from the dimension table
+        query_info = f"""
+            SELECT question_id, type 
+            FROM dim_questions 
+            WHERE column_name = '{column}'
         """
-        question_type = self.conn.execute(query_type).fetchone()[0]  # type: ignore
+        result = self.conn.execute(query_info).fetchone()
+        if not result:
+            return pd.DataFrame(columns=["option", "count", "percentage"])
+
+        question_id, question_type = result  # type: ignore
 
         if question_type == "SC":
             # For single choice questions, count each value
-            query = f'''
-                SELECT "{column}" as option, COUNT(*) as count,
-                       COUNT(*) * 100.0 / (SELECT COUNT(*) FROM so_data WHERE "{column}" IS NOT NULL) as percentage
-                FROM so_data
-                WHERE "{column}" IS NOT NULL
-                GROUP BY "{column}"
+            query = f"""
+                SELECT 
+                    response as option, 
+                    COUNT(*) as count,
+                    COUNT(*) * 100.0 / (
+                        SELECT COUNT(*) 
+                        FROM fact_responses_sc 
+                        WHERE question_id = {question_id} AND response != 'NA'
+                    ) as percentage
+                FROM fact_responses_sc
+                WHERE question_id = {question_id} AND response != 'NA'
+                GROUP BY response
                 ORDER BY count DESC
-            '''
+            """
         elif question_type == "MC":
-            # For multiple choice questions, need to unnest the semicolon-separated values
-            query = f'''
-                WITH unnested AS (
-                    SELECT unnest(string_split("{column}", ';')) as option
-                    FROM so_data
-                    WHERE "{column}" IS NOT NULL
-                )
-                SELECT option, COUNT(*) as count,
-                       COUNT(*) * 100.0 / (SELECT COUNT(*) FROM unnested) as percentage
-                FROM unnested
-                GROUP BY option
+            # For multiple choice questions, count each option
+            query = f"""
+                SELECT 
+                    response as option, 
+                    COUNT(*) as count,
+                    COUNT(*) * 100.0 / (
+                        SELECT COUNT(*) 
+                        FROM fact_responses_mc 
+                        WHERE question_id = {question_id}
+                    ) as percentage
+                FROM fact_responses_mc
+                WHERE question_id = {question_id}
+                GROUP BY response
                 ORDER BY count DESC
-            '''
+            """
         else:
             # For other question types, return an empty DataFrame
             return pd.DataFrame(columns=["option", "count", "percentage"])

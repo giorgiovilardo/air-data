@@ -88,14 +88,23 @@ def display_answer_distribution(
         console.print(f"Question '{column}' not found", style="bold red")
         return
 
+    # If multiple matches found, try to find an exact match for the column name
+    exact_match = question_info[question_info["column"] == column]
+    if len(exact_match) > 0:
+        question_info = exact_match
+
+    # Use the first match
+    column_name = question_info.iloc[0]["column"]
     question_text = question_info.iloc[0]["question_text"]
     question_type = question_info.iloc[0]["type"]
 
     # Get the distribution
-    distribution = analyzer.get_answer_distribution(column=column)
+    distribution = analyzer.get_answer_distribution(column=column_name)
 
     if len(distribution) == 0:
-        console.print(f"No data available for question '{column}'", style="bold red")
+        console.print(
+            f"No data available for question '{column_name}'", style="bold red"
+        )
         return
 
     # Create a table
@@ -133,14 +142,23 @@ def display_respondent_subset(
         console.print(f"Question '{column}' not found", style="bold red")
         return
 
+    # If multiple matches found, try to find an exact match for the column name
+    exact_match = question_info[question_info["column"] == column]
+    if len(exact_match) > 0:
+        question_info = exact_match
+
+    # Use the first match
+    column_name = question_info.iloc[0]["column"]
     question_text = question_info.iloc[0]["question_text"]
     question_type = question_info.iloc[0]["type"]
 
     # Get the respondent subset distribution
-    subset_df = analyzer.create_respondent_subset(column=column, option=option)
+    subset_df = analyzer.create_respondent_subset(column=column_name, option=option)
 
     if len(subset_df) == 0:
-        console.print(f"No data available for question '{column}'", style="bold red")
+        console.print(
+            f"No data available for question '{column_name}'", style="bold red"
+        )
         return
 
     # Create a title based on whether an option was specified
@@ -190,10 +208,7 @@ def main() -> None:
         console.print(f"Using custom data file: {data_file}", style="dim")
         console.print(f"Using custom schema file: {schema_file}", style="dim")
 
-    analyzer = StackOverflowAnalyzer(
-        data_file=data_file,
-        schema_file=schema_file,
-    )
+    analyzer = StackOverflowAnalyzer.from_split_files()
 
     while True:
         console.print("\nOptions:", style="bold")

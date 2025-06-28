@@ -97,6 +97,34 @@ def test_search_questions(so_schema_file: str, so_sample_file: str):
     assert any(results["question_text"].str.contains(search_term, case=False))
 
 
+def test_search_questions_in_column_name(so_schema_file: str, so_sample_file: str):
+    """
+    Test that the search_questions method returns questions matching the search term in column name.
+    """
+    # Create a StackOverflowAnalyzer instance
+    analyzer = StackOverflowAnalyzer(
+        data_file=so_sample_file,
+        schema_file=so_schema_file,
+    )
+
+    # Get a column name from the schema
+    cursor = analyzer.conn.cursor()
+    cursor.execute('SELECT "column" FROM so_schema LIMIT 1')
+    column = cursor.fetchone()[0]  # type: ignore
+
+    # Extract a substring from the column name to use as search term
+    search_term = column[:3]  # Use first 3 characters of the column name
+
+    # Search for the column name
+    results = analyzer.search_questions(search_term=search_term)
+
+    # Verify that the result is a DataFrame
+    assert isinstance(results, pd.DataFrame)
+
+    # Verify that the search term is found in the column names
+    assert any(results["column"].str.contains(search_term, case=False))
+
+
 def test_create_respondent_subset(so_schema_file: str, so_sample_file: str):
     """
     Test that the create_respondent_subset method returns a DataFrame with the distribution

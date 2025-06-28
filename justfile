@@ -7,7 +7,7 @@ _format:
 _isort:
     ruff check --select I --fix src tests
 
-fmt: && _isort _format
+fmt: _isort _format
 
 lint:
     ruff check --fix src tests

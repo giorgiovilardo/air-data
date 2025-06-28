@@ -18,11 +18,54 @@ class TestStackOverflowAnalyzer:
         """Test that CSV data is loaded correctly into DuckDB tables."""
         analyzer = StackOverflowAnalyzer()
 
-        # Check that tables exist
+        # Check that original tables exist
         tables = analyzer.conn.execute("SHOW TABLES").fetchall()
         table_names = [table[0] for table in tables]
         assert "survey_data" in table_names
         assert "survey_schema" in table_names
+
+        analyzer.close()
+
+    def test_star_schema_creation(self) -> None:
+        """Test that star schema tables are created correctly."""
+        analyzer = StackOverflowAnalyzer()
+
+        # Check that star schema tables exist
+        tables = analyzer.conn.execute("SHOW TABLES").fetchall()
+        table_names = [table[0] for table in tables]
+        assert "dim_questions" in table_names
+        assert "dim_respondents" in table_names
+        assert "dim_answer_options" in table_names
+        assert "fact_responses" in table_names
+
+        # Check that dimension tables have data
+        questions_result = analyzer.conn.execute(
+            "SELECT COUNT(*) FROM dim_questions"
+        ).fetchone()
+        respondents_result = analyzer.conn.execute(
+            "SELECT COUNT(*) FROM dim_respondents"
+        ).fetchone()
+        answer_options_result = analyzer.conn.execute(
+            "SELECT COUNT(*) FROM dim_answer_options"
+        ).fetchone()
+        responses_result = analyzer.conn.execute(
+            "SELECT COUNT(*) FROM fact_responses"
+        ).fetchone()
+
+        assert questions_result is not None
+        assert respondents_result is not None
+        assert answer_options_result is not None
+        assert responses_result is not None
+
+        questions_count = questions_result[0]
+        respondents_count = respondents_result[0]
+        answer_options_count = answer_options_result[0]
+        responses_count = responses_result[0]
+
+        assert questions_count > 0
+        assert respondents_count > 0
+        assert answer_options_count > 0
+        assert responses_count > 0
 
         analyzer.close()
 
@@ -135,6 +178,95 @@ class TestStackOverflowAnalyzer:
         assert result is not None and result[0] > 0, (
             "No rows found when reading CSV directly"
         )
+
+        analyzer.close()
+
+    def test_survey_structure(self) -> None:
+        """Test getting survey structure."""
+        analyzer = StackOverflowAnalyzer()
+
+        structure = analyzer.get_survey_structure()
+        assert isinstance(structure, pd.DataFrame)
+        assert len(structure) > 0
+
+        # Check expected columns
+        expected_columns = [
+            "question_id",
+            "column_name",
+            "question_text",
+            "type",
+            "num_answer_options",
+        ]
+        for col in expected_columns:
+            assert col in structure.columns
+
+        # Check that we have both SC and MC questions
+        types = set(structure["type"].tolist())
+        assert "SC" in types
+        assert "MC" in types
+
+        analyzer.close()
+
+    def test_search_questions(self) -> None:
+        """Test searching for questions."""
+        analyzer = StackOverflowAnalyzer()
+
+        # Search for programming languages
+        results = analyzer.search_questions("language")
+        assert isinstance(results, pd.DataFrame)
+        assert len(results) > 0
+
+        # Search for age-related questions
+        results = analyzer.search_questions("age")
+        assert isinstance(results, pd.DataFrame)
+        assert len(results) > 0
+
+        analyzer.close()
+
+    def test_respondent_subset(self) -> None:
+        """Test getting respondent subsets."""
+        analyzer = StackOverflowAnalyzer()
+
+        # Get respondents who selected "Remote" for RemoteWork
+        subset = analyzer.get_respondent_subset("RemoteWork", "Remote")
+        assert isinstance(subset, pd.DataFrame)
+
+        # Check expected columns
+        expected_columns = [
+            "respondent_id",
+            "MainBranch",
+            "Age",
+            "Country",
+            "DevType",
+            "YearsCode",
+        ]
+        for col in expected_columns:
+            assert col in subset.columns
+
+        analyzer.close()
+
+    def test_answer_distribution(self) -> None:
+        """Test getting answer distribution."""
+        analyzer = StackOverflowAnalyzer()
+
+        # Test SC question distribution
+        distribution = analyzer.get_answer_distribution("Age")
+        assert isinstance(distribution, pd.DataFrame)
+        assert len(distribution) > 0
+
+        # Check expected columns
+        expected_columns = ["answer_value", "response_count", "type", "percentage"]
+        for col in expected_columns:
+            assert col in distribution.columns
+
+        # Check that percentages sum to approximately 100 for SC questions
+        if len(distribution) > 0:
+            total_percentage = distribution["percentage"].sum()
+            assert 99 <= total_percentage <= 101  # Allow for rounding differences
+
+        # Test MC question distribution
+        distribution_mc = analyzer.get_answer_distribution("Employment")
+        assert isinstance(distribution_mc, pd.DataFrame)
 
         analyzer.close()
 

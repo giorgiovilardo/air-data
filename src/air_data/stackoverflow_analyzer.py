@@ -1,0 +1,2 @@
+class StackOverflowAnalyzer:
+    pass

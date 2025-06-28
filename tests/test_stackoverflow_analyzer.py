@@ -99,7 +99,8 @@ def test_search_questions(so_schema_file: str, so_sample_file: str):
 
 def test_create_respondent_subset(so_schema_file: str, so_sample_file: str):
     """
-    Test that the create_respondent_subset method returns a subset of respondents.
+    Test that the create_respondent_subset method returns a DataFrame with the distribution
+    of respondents grouped by their answers to the specified question.
     """
     # Create a StackOverflowAnalyzer instance
     analyzer = StackOverflowAnalyzer(
@@ -113,15 +114,18 @@ def test_create_respondent_subset(so_schema_file: str, so_sample_file: str):
     column = cursor.fetchone()[0]  # type: ignore
 
     # Create a subset based on the column
-    subset = analyzer.create_respondent_subset(column=column, option="")
+    subset_df = analyzer.create_respondent_subset(column=column, option="")
 
-    # Verify that the result is a StackOverflowAnalyzer
-    assert isinstance(subset, StackOverflowAnalyzer)
+    # Verify that the result is a DataFrame
+    assert isinstance(subset_df, pd.DataFrame)
 
-    # Verify that the subset has the same attributes as the original
-    assert hasattr(subset, "data_file")
-    assert hasattr(subset, "schema_file")
-    assert hasattr(subset, "conn")
+    # Verify that the DataFrame has the expected columns
+    assert "option" in subset_df.columns
+    assert "count" in subset_df.columns
+    assert "percentage" in subset_df.columns
+
+    # Verify that the DataFrame has data
+    assert len(subset_df) > 0
 
 
 def test_get_answer_distribution(so_schema_file: str, so_sample_file: str):

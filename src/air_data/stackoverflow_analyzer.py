@@ -115,47 +115,89 @@ class StackOverflowAnalyzer:
         # Execute the query and return the result as a DataFrame
         return self.conn.execute(query).df()
 
-    def create_respondent_subset(self, *, column: str, option: str) -> Self:
+    def create_respondent_subset(self, *, column: str, option: str) -> pd.DataFrame:
         """
-        Creates a subset of respondents based on their answer to a specific question.
+        Returns a DataFrame showing the distribution of respondents grouped by their answers
+        to the specified question.
 
         Args:
-            column: The column (question) to filter on.
+            column: The column (question) to analyze.
             option: The option (answer) to filter for. If empty, includes all non-null values.
 
         Returns:
-            Self: A new StackOverflowAnalyzer instance with the filtered data.
+            pd.DataFrame: DataFrame containing the distribution of respondents grouped by their answers.
         """
-        import os
-        import tempfile
+        # Get the question type from the schema
+        query_type = f"""
+            SELECT "type" FROM so_schema 
+            WHERE "column" = '{column}'
+        """
+        question_type = self.conn.execute(query_type).fetchone()[0]  # type: ignore
 
-        # Create a query to filter the data
-        if option:
-            # For MC questions, need to check if the option is in the semicolon-separated list
-            query = f'''
-                SELECT * FROM so_data 
-                WHERE "{column}" = '{option}' OR "{column}" LIKE '{option};%' OR 
-                      "{column}" LIKE '%;{option}' OR "{column}" LIKE '%;{option};%'
-            '''
+        # Create the base query depending on the question type
+        if question_type == "SC":
+            # For single choice questions
+            if option:
+                # Filter for the specific option
+                query = f'''
+                    SELECT "{column}" as option, COUNT(*) as count,
+                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM so_data WHERE "{column}" = '{option}') as percentage
+                    FROM so_data
+                    WHERE "{column}" = '{option}'
+                    GROUP BY "{column}"
+                    ORDER BY count DESC
+                '''
+            else:
+                # Show distribution of all options
+                query = f'''
+                    SELECT "{column}" as option, COUNT(*) as count,
+                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM so_data WHERE "{column}" IS NOT NULL) as percentage
+                    FROM so_data
+                    WHERE "{column}" IS NOT NULL
+                    GROUP BY "{column}"
+                    ORDER BY count DESC
+                '''
+        elif question_type == "MC":
+            # For multiple choice questions
+            if option:
+                # Filter for the specific option in semicolon-separated values
+                query = f'''
+                    WITH filtered_data AS (
+                        SELECT * FROM so_data 
+                        WHERE "{column}" = '{option}' OR "{column}" LIKE '{option};%' OR 
+                              "{column}" LIKE '%;{option}' OR "{column}" LIKE '%;{option};%'
+                    ),
+                    unnested AS (
+                        SELECT unnest(string_split("{column}", ';')) as option
+                        FROM filtered_data
+                        WHERE "{column}" IS NOT NULL
+                    )
+                    SELECT option, COUNT(*) as count,
+                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM unnested) as percentage
+                    FROM unnested
+                    GROUP BY option
+                    ORDER BY count DESC
+                '''
+            else:
+                # Show distribution of all options
+                query = f'''
+                    WITH unnested AS (
+                        SELECT unnest(string_split("{column}", ';')) as option
+                        FROM so_data
+                        WHERE "{column}" IS NOT NULL
+                    )
+                    SELECT option, COUNT(*) as count,
+                           COUNT(*) * 100.0 / (SELECT COUNT(*) FROM unnested) as percentage
+                    FROM unnested
+                    GROUP BY option
+                    ORDER BY count DESC
+                '''
         else:
-            # If no option specified, include all non-null values
-            query = f'''
-                SELECT * FROM so_data 
-                WHERE "{column}" IS NOT NULL AND "{column}" != ''
-            '''
+            # For other question types, return an empty DataFrame
+            return pd.DataFrame(columns=["option", "count", "percentage"])
 
-        # Execute the query to get the filtered data
-        filtered_data = self.conn.execute(query).df()
-
-        # Create a temporary file for the filtered data
-        temp_fd, filtered_path = tempfile.mkstemp(suffix=".csv")
-        os.close(temp_fd)
-
-        # Write the filtered data to the temporary file
-        filtered_data.to_csv(filtered_path, index=False)
-
-        # Create and return a new analyzer instance with the filtered data
-        return type(self)(data_file=filtered_path, schema_file=self.schema_file)
+        # Execute the query and return the result as a DataFrame
+        return self.conn.execute(query).df()
 
     def get_answer_distribution(self, *, column: str) -> pd.DataFrame:
         """

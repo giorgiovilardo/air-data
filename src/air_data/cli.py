@@ -114,6 +114,56 @@ def display_answer_distribution(
     console.print(table)
 
 
+def display_respondent_subset(
+    analyzer: StackOverflowAnalyzer, *, column: str, option: str
+) -> None:
+    """
+    Display the distribution of respondents grouped by their answers to the specified question.
+
+    Args:
+        analyzer: The StackOverflowAnalyzer instance
+        column: The column (question) to analyze
+        option: The option (answer) to filter for. If empty, includes all non-null values.
+    """
+    console = Console()
+
+    # Get the question text and type
+    question_info = analyzer.search_questions(search_term=column)
+    if len(question_info) == 0:
+        console.print(f"Question '{column}' not found", style="bold red")
+        return
+
+    question_text = question_info.iloc[0]["question_text"]
+    question_type = question_info.iloc[0]["type"]
+
+    # Get the respondent subset distribution
+    subset_df = analyzer.create_respondent_subset(column=column, option=option)
+
+    if len(subset_df) == 0:
+        console.print(f"No data available for question '{column}'", style="bold red")
+        return
+
+    # Create a title based on whether an option was specified
+    title = f"Respondent Distribution for '{question_text}' ({question_type})"
+    if option:
+        title += f" - Filtered by '{option}'"
+
+    # Create a table
+    table = Table(title=title)
+    table.add_column("Option", style="cyan")
+    table.add_column("Count", style="green", justify="right")
+    table.add_column("Percentage", style="magenta", justify="right")
+
+    # Add rows to the table
+    for _, row in subset_df.iterrows():
+        table.add_row(
+            str(row["option"]), str(row["count"]), f"{row['percentage']:.2f}%"
+        )
+
+    # Display the table
+    console.print(table)
+
+
 def main() -> None:
     """
     Main CLI function.
@@ -167,18 +217,11 @@ def main() -> None:
             option = Prompt.ask("Enter option (leave empty for all non-null values)")
 
             try:
-                subset = analyzer.create_respondent_subset(column=column, option=option)
-                count = subset.conn.execute("SELECT COUNT(*) FROM so_data").fetchone()[  # type: ignore
-                    0
-                ]
-                console.print(
-                    f"Created subset with {count} respondents", style="bold green"
-                )
-
-                # Use the subset for further analysis
-                analyzer = subset
+                display_respondent_subset(analyzer, column=column, option=option)
             except Exception as e:
-                console.print(f"Error creating subset: {e}", style="bold red")
+                console.print(
+                    f"Error creating respondent subset: {e}", style="bold red"
+                )
 
         elif choice == "4":
             column = Prompt.ask("Enter column name")

@@ -12,7 +12,7 @@ class StackOverflowAnalyzer:
         # Get paths to CSV files relative to this module
         base_path = Path(__file__).parent / "so_data"
         self.data_csv_path: Path = (
-            base_path / "so_2024_sample.csv"
+            base_path / "so_2024_raw.csv"
         )  # Updated to use sample file
         self.schema_csv_path: Path = base_path / "so_2024_raw_schema.csv"
 
@@ -36,11 +36,11 @@ class StackOverflowAnalyzer:
 
     def _create_star_schema(self) -> None:
         """Create star schema with fact and dimension tables."""
-        # Create dimension table for questions
+        # Create dimension table for questions - preserve original CSV order
         self.conn.execute("""
             CREATE TABLE dim_questions AS
             SELECT 
-                ROW_NUMBER() OVER (ORDER BY "column") as question_id,
+                ROW_NUMBER() OVER () as question_id,
                 "column" as column_name,
                 question_text,
                 type
@@ -78,7 +78,7 @@ class StackOverflowAnalyzer:
             ),
             question_mapping AS (
                 SELECT 
-                    ROW_NUMBER() OVER (ORDER BY "column") as question_id,
+                    ROW_NUMBER() OVER () as question_id,
                     "column" as column_name,
                     type
                 FROM survey_schema
@@ -146,7 +146,7 @@ class StackOverflowAnalyzer:
             ) r
             CROSS JOIN (
                 SELECT 
-                    ROW_NUMBER() OVER (ORDER BY "column") as question_id,
+                    ROW_NUMBER() OVER () as question_id,
                     "column" as column_name,
                     type
                 FROM survey_schema

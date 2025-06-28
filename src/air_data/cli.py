@@ -28,12 +28,20 @@ def display_survey_structure(analyzer: StackOverflowAnalyzer, console: Console) 
 
     for _, row in structure.iterrows():
         question_text = str(row["question_text"])
+        # Use column name if question text is too short or unclear
+        if len(question_text.strip()) < 10 or question_text in ["nan", "None", ""]:
+            display_text = f"[{row['column_name']}]"
+        else:
+            display_text = (
+                question_text[:77] + "..." if len(question_text) > 80 else question_text
+            )
+
         table.add_row(
             str(row["question_id"]),
             str(row["column_name"]),
             str(row["type"]),
             str(row["num_answer_options"]),
-            question_text[:77] + "..." if len(question_text) > 80 else question_text,
+            display_text,
         )
 
     console.print(table)

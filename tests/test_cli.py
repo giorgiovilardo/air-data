@@ -31,9 +31,10 @@ def mock_analyzer():
     # Mock search_questions
     mock.search_questions.return_value = pd.DataFrame(
         {
-            "column": ["Age"],
-            "question_text": ["What is your age?"],
-            "type": ["SC"],
+            "column": ["Age", "DevType"],
+            "question_text": ["What is your age?", "What is your role?"],
+            "type": ["SC", "MC"],
+            "match_type": ["question", "answer"],
         }
     )
 
@@ -85,7 +86,7 @@ def test_display_survey_structure(
 @patch("src.air_data.cli.Console")
 def test_search_questions(mock_console_class: MagicMock, mock_analyzer: MagicMock):
     """
-    Test that search_questions correctly displays the search results.
+    Test that search_questions correctly displays the search results for both questions and answers.
     """
     # Create a mock console
     mock_console = MagicMock()
@@ -97,11 +98,18 @@ def test_search_questions(mock_console_class: MagicMock, mock_analyzer: MagicMoc
     # Verify that search_questions was called with the correct search term
     mock_analyzer.search_questions.assert_called_once_with(search_term="age")
 
-    # Verify that console.print was called with a Table
-    mock_console.print.assert_called_once()
-    args, _ = mock_console.print.call_args
-    assert isinstance(args[0], Table)
-    assert args[0].title == "Questions containing 'age'"
+    # Verify that console.print was called twice (once for questions, once for answers)
+    assert mock_console.print.call_count == 2
+
+    # Check the first table (questions)
+    args1, _ = mock_console.print.call_args_list[0]
+    assert isinstance(args1[0], Table)
+    assert args1[0].title == "Questions containing 'age'"
+
+    # Check the second table (answers)
+    args2, _ = mock_console.print.call_args_list[1]
+    assert isinstance(args2[0], Table)
+    assert args2[0].title == "Questions with answers containing 'age'"
 
 
 @patch("src.air_data.cli.Console")

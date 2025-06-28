@@ -246,25 +246,60 @@ class StackOverflowAnalyzer:
         Searches for questions containing the specified search term.
 
         Args:
-            search_term: The term to search for in question text or column name.
+            search_term: The term to search for in question text, column name, or answers.
 
         Returns:
-            pd.DataFrame: DataFrame containing the matching questions.
+            pd.DataFrame: DataFrame containing the matching questions and answers.
         """
         # Query the dimension table for questions to find those containing the search term
         # in either the question_text or column_name
-        query = f"""
+        questions_query = f"""
             SELECT 
                 column_name as column,
                 question_text,
-                type
+                type,
+                'question' as match_type
             FROM dim_questions 
             WHERE question_text ILIKE '%{search_term}%' OR column_name ILIKE '%{search_term}%'
-            ORDER BY question_id
+        """
+
+        # Query the fact tables for answers containing the search term
+        sc_answers_query = f"""
+            SELECT 
+                q.column_name as column,
+                q.question_text,
+                q.type,
+                'answer' as match_type
+            FROM fact_responses_sc r
+            JOIN dim_questions q ON r.question_id = q.question_id
+            WHERE r.response ILIKE '%{search_term}%'
+            GROUP BY q.column_name, q.question_text, q.type
+        """
+
+        mc_answers_query = f"""
+            SELECT 
+                q.column_name as column,
+                q.question_text,
+                q.type,
+                'answer' as match_type
+            FROM fact_responses_mc r
+            JOIN dim_questions q ON r.question_id = q.question_id
+            WHERE r.response ILIKE '%{search_term}%'
+            GROUP BY q.column_name, q.question_text, q.type
+        """
+
+        # Combine the results
+        combined_query = f"""
+            SELECT * FROM ({questions_query}) q
+            UNION
+            SELECT * FROM ({sc_answers_query}) sc
+            UNION
+            SELECT * FROM ({mc_answers_query}) mc
+            ORDER BY "column"
         """
 
         # Execute the query and return the result as a DataFrame
-        return self.conn.execute(query).df()
+        return self.conn.execute(combined_query).df()
 
     def create_respondent_subset(self, *, column: str, option: str) -> pd.DataFrame:
         """

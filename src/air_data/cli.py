@@ -39,7 +39,7 @@ def display_survey_structure(
 
 def search_questions(analyzer: StackOverflowAnalyzer, *, search_term: str) -> None:
     """
-    Search for questions containing the specified search term.
+    Search for questions and answers containing the specified search term.
 
     Args:
         analyzer: The StackOverflowAnalyzer instance
@@ -47,27 +47,49 @@ def search_questions(analyzer: StackOverflowAnalyzer, *, search_term: str) -> No
     """
     console = Console()
 
-    # Search for questions
+    # Search for questions and answers
     results = analyzer.search_questions(search_term=search_term)
 
     if len(results) == 0:
         console.print(
-            f"No questions found containing '{search_term}'", style="bold red"
+            f"No questions or answers found containing '{search_term}'",
+            style="bold red",
         )
         return
 
-    # Create a table
-    table = Table(title=f"Questions containing '{search_term}'")
-    table.add_column("Column", style="cyan")
-    table.add_column("Question", style="green")
-    table.add_column("Type", style="magenta")
+    # Split results into questions and answers
+    questions = results[results["match_type"] == "question"]
+    answers = results[results["match_type"] == "answer"]
 
-    # Add rows to the table
-    for _, row in results.iterrows():
-        table.add_row(row["column"], row["question_text"], row["type"])
+    # Display questions if any
+    if len(questions) > 0:
+        # Create a table for questions
+        q_table = Table(title=f"Questions containing '{search_term}'")
+        q_table.add_column("Column", style="cyan")
+        q_table.add_column("Question", style="green")
+        q_table.add_column("Type", style="magenta")
 
-    # Display the table
-    console.print(table)
+        # Add rows to the table
+        for _, row in questions.iterrows():
+            q_table.add_row(row["column"], row["question_text"], row["type"])
+
+        # Display the table
+        console.print(q_table)
+
+    # Display answers if any
+    if len(answers) > 0:
+        # Create a table for answers
+        a_table = Table(title=f"Questions with answers containing '{search_term}'")
+        a_table.add_column("Column", style="cyan")
+        a_table.add_column("Question", style="green")
+        a_table.add_column("Type", style="magenta")
+
+        # Add rows to the table
+        for _, row in answers.iterrows():
+            a_table.add_row(row["column"], row["question_text"], row["type"])
+
+        # Display the table
+        console.print(a_table)
 
 
 def display_answer_distribution(

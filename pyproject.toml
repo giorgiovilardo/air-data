@@ -21,3 +21,16 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/air_data"]
+
+[tool.basedpyright]
+include = ["src"]
+exclude = ["**/__pycache__", "**/.git", "**/.venv"]
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportMissingParameterType = "warning"
+reportImportCycles = "warning"
+reportPrivateImportUsage = false
+useLibraryCodeForTypes = true

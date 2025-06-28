@@ -1,3 +1,4 @@
+from pathlib import Path
 
 import pandas as pd
 
@@ -5,7 +6,7 @@ from air_data.stackoverflow_analyzer import StackOverflowAnalyzer
 
 
 class TestStackOverflowAnalyzer:
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test that the analyzer initializes correctly."""
         analyzer = StackOverflowAnalyzer()
         assert analyzer.conn is not None
@@ -13,7 +14,7 @@ class TestStackOverflowAnalyzer:
         assert analyzer.schema_csv_path.exists()
         analyzer.close()
 
-    def test_data_loading(self):
+    def test_data_loading(self) -> None:
         """Test that CSV data is loaded correctly into DuckDB tables."""
         analyzer = StackOverflowAnalyzer()
 
@@ -25,7 +26,7 @@ class TestStackOverflowAnalyzer:
 
         analyzer.close()
 
-    def test_get_data_table(self):
+    def test_get_data_table(self) -> None:
         """Test getting the survey data table."""
         analyzer = StackOverflowAnalyzer()
 
@@ -41,7 +42,7 @@ class TestStackOverflowAnalyzer:
 
         analyzer.close()
 
-    def test_get_schema_table(self):
+    def test_get_schema_table(self) -> None:
         """Test getting the survey schema table."""
         analyzer = StackOverflowAnalyzer()
 
@@ -56,7 +57,7 @@ class TestStackOverflowAnalyzer:
 
         analyzer.close()
 
-    def test_get_table_info(self):
+    def test_get_table_info(self) -> None:
         """Test getting table structure information."""
         analyzer = StackOverflowAnalyzer()
 
@@ -74,7 +75,9 @@ class TestStackOverflowAnalyzer:
 
         analyzer.close()
 
-    def test_csv_files_exist(self, sample_csv_file, schema_csv_file):
+    def test_csv_files_exist(
+        self, sample_csv_file: Path, schema_csv_file: Path
+    ) -> None:
         """Test that the required CSV files exist using fixtures."""
         assert sample_csv_file.exists()
         assert schema_csv_file.exists()
@@ -83,7 +86,7 @@ class TestStackOverflowAnalyzer:
         assert sample_csv_file.stat().st_size > 1000  # At least 1KB
         assert schema_csv_file.stat().st_size > 1000  # At least 1KB
 
-    def test_csv_content_structure(self, sample_csv, schema_csv):
+    def test_csv_content_structure(self, sample_csv: str, schema_csv: str) -> None:
         """Test the structure of CSV content using fixtures."""
         # Test that sample CSV has header and data
         sample_lines = sample_csv.strip().split("\n")
@@ -99,7 +102,7 @@ class TestStackOverflowAnalyzer:
         assert "question_text" in schema_header
         assert "type" in schema_header
 
-    def test_data_schema_consistency(self):
+    def test_data_schema_consistency(self) -> None:
         """Test that data columns match schema definitions."""
         analyzer = StackOverflowAnalyzer()
 
@@ -119,7 +122,7 @@ class TestStackOverflowAnalyzer:
 
         analyzer.close()
 
-    def test_duckdb_native_csv_reading(self):
+    def test_duckdb_native_csv_reading(self) -> None:
         """Test that DuckDB's native CSV reading is working correctly."""
         analyzer = StackOverflowAnalyzer()
 
@@ -129,11 +132,13 @@ class TestStackOverflowAnalyzer:
             FROM read_csv_auto('{analyzer.data_csv_path}')
         """).fetchone()
 
-        assert result[0] > 0, "No rows found when reading CSV directly"
+        assert result is not None and result[0] > 0, (
+            "No rows found when reading CSV directly"
+        )
 
         analyzer.close()
 
-    def test_memory_database(self):
+    def test_memory_database(self) -> None:
         """Test that we're using an in-memory database."""
         analyzer = StackOverflowAnalyzer()
 

@@ -25,3 +25,15 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/air_data"]
+
+[tool.basedpyright]
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/.venv"]
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false  
+reportUnknownArgumentType = false
+reportAny = false
+reportMissingParameterType = "warning"
+reportUntypedFunctionDecorator = false
